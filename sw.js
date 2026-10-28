@@ -1,6 +1,7 @@
-/* سرویس‌ورکر آفلاین — چالش روزانهٔ سود مرکب */
-const CACHE = "compound-tracker-v2";
-const CORE = ["./", "./index.html", "./manifest.webmanifest"];
+/* سرویس‌ورکر آفلاین — چالش روزانهٔ سود مرکب
+   استراتژی: اول شبکه (برای گرفتن آخرین نسخه)، اگه آفلاین بود از کش */
+const CACHE = "compound-tracker-v3";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -19,18 +20,18 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  const sameOrigin = new URL(e.request.url).origin === self.location.origin;
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      if (hit) return hit;
-      return fetch(e.request)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
+    fetch(e.request, sameOrigin ? { cache: "no-cache" } : undefined)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(e.request).then((hit) => hit || caches.match("./index.html"))
+      )
   );
 });
